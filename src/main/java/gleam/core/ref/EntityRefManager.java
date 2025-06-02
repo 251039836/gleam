@@ -318,16 +318,9 @@ public class EntityRefManager extends AbstractService {
 		int dstEntityType = message.getDstEntityType();
 		long dstEntityId = message.getDstEntityId();
 		boolean dstEntityExists = message.isDstEntityExists();
-		long now = TimeUtil.now();
 		RemoteEntityRef remoteRef = getRemoteRef(dstEntityType, dstEntityId, true);
-		remoteRef.setLastTime(now);
-		if (dstEntityExists) {
-			remoteRef.setState(EntityRefState.RUN);
-		} else {
-			remoteRef.setState(EntityRefState.INVALID);
-		}
-		// TODO 清理当前累积的任务
-
+		// 设置状态 清理当前累积的任务
+		remoteRef.handleCheckResult(dstEntityExists);
 		return null;
 	}
 

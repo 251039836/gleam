@@ -1,6 +1,7 @@
 package gleam.core.ref.impl;
 
 import java.util.Queue;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -11,6 +12,7 @@ import gleam.communication.Connection;
 import gleam.communication.Protocol;
 import gleam.communication.protocol.ProtocolUtil;
 import gleam.communication.rpc.ResponseCallback;
+import gleam.communication.rpc.RpcCallback;
 import gleam.communication.rpc.RpcCallbackCache;
 import gleam.communication.rpc.impl.RpcCallbackHandler;
 import gleam.communication.rpc.impl.RpcFutureResult;
@@ -21,7 +23,7 @@ import gleam.core.ref.EntityRefManager;
 import gleam.core.ref.define.EntityRefState;
 import gleam.core.ref.protocol.ReqEntityForward;
 import gleam.core.service.Context;
-import gleam.util.tuple.Pair;
+import gleam.util.time.TimeUtil;
 
 /**
  * 其他进程的实体在当前进程中的引用
@@ -51,10 +53,9 @@ public class RemoteEntityRef implements EntityRef {
 	private long lastTime;
 	// -------------------------------------------------------------------------
 	/**
-	 * 等待发送的消息<br>
-	 * seq,消息
+	 * 等待发送的消息
 	 */
-	private Queue<Pair<Integer, Protocol>> waitSendMsgs = new LinkedBlockingQueue<>();
+	private Queue<Protocol> waitSendMsgs = new LinkedBlockingQueue<>();
 
 	/**
 	 * 协议序号生成器<br>
@@ -67,7 +68,8 @@ public class RemoteEntityRef implements EntityRef {
 	@Override
 	public void tell(Protocol message) {
 		if (!isActive()) {
-			addWaitSendMsg(message);
+			waitSendMsgs.add(message);
+			return;
 		}
 		sendProtocol(message);
 	}
@@ -80,13 +82,13 @@ public class RemoteEntityRef implements EntityRef {
 			return result;
 		}
 		int seq = generateSeq();
+		request.setSeq(seq);
 		long now = System.currentTimeMillis();
 		long expiredTime = now + timeout;
 		RpcFutureResult<R> result = new RpcFutureResult<>(seq, expiredTime);
-		request.setSeq(seq);
 		callbackCache.addCallback(result);
 		if (!isActive()) {
-			addWaitSendMsg(request);
+			waitSendMsgs.add(request);
 			return result;
 		}
 		try {
@@ -115,7 +117,7 @@ public class RemoteEntityRef implements EntityRef {
 		RpcCallbackHandler<?> handler = new RpcCallbackHandler<>(seq, expiredTime, callback);
 		callbackCache.addCallback(handler);
 		if (!isActive()) {
-			addWaitSendMsg(request);
+			waitSendMsgs.add(request);
 			return;
 		}
 		try {
@@ -128,11 +130,6 @@ public class RemoteEntityRef implements EntityRef {
 				logger.error("refrpc ask[{}] handleException error.", request.getId(), e2);
 			}
 		}
-	}
-
-	private void addWaitSendMsg(Protocol request) {
-		Pair<Integer, Protocol> pair = Pair.of(request.getSeq(), request);
-		waitSendMsgs.add(pair);
 	}
 
 	private boolean isActive() {
@@ -223,5 +220,55 @@ public class RemoteEntityRef implements EntityRef {
 		// 重置从1开始
 		seqGenerator.compareAndSet(seq, 1);
 		return seqGenerator.incrementAndGet();
+	}
+
+	/**
+	 * 处理检测实体是否存在结果
+	 * 
+	 * @param entityExists
+	 */
+	public void handleCheckResult(boolean entityExists) {
+		lastTime = TimeUtil.now();
+		if (!entityExists) {
+			state.set(EntityRefState.INVALID);
+			waitSendMsgs.clear();
+			ConcurrentMap<Integer, RpcCallback<? extends Protocol>> callbackMap = callbackCache.getCallbackMap();
+			for (RpcCallback<?> callback : callbackMap.values()) {
+				callback.receiveReturnCode(BasicErrorCode.ENTITY_NOT_EXISTS);
+			}
+			callbackMap.clear();
+			return;
+		}
+
+		state.set(EntityRefState.RUN);
+		if (waitSendMsgs.isEmpty()) {
+			return;
+		}
+		int dstServerType = address.getType().getType();
+		int dstServerId = address.getId();
+		Connection connection = EntityRefManager.getInstance().getServerConnection(dstServerType, dstServerId);
+		if (connection == null || !connection.isActive()) {
+			waitSendMsgs.clear();
+			return;
+		}
+		Context context = EntityRefManager.getInstance().getOwner();
+		int srcServerType = context.getServerType().getType();
+		int srcServerId = context.getServerId();
+		while (!waitSendMsgs.isEmpty()) {
+			Protocol forwardMsg = waitSendMsgs.peek();
+			ReqEntityForward protocol = new ReqEntityForward();
+			protocol.setSrcServerType(srcServerType);
+			protocol.setSrcServerId(srcServerId);
+			protocol.setDstServerType(dstServerType);
+			protocol.setDstServerId(dstServerId);
+			protocol.setDstEntityType(type);
+			protocol.setDstEntityId(id);
+			protocol.setForwardMsgId(forwardMsg.getId());
+			protocol.setForwardMsgSeq(forwardMsg.getSeq());
+			byte[] forwardMsgData = ProtocolUtil.encodeMessage(forwardMsg);
+			protocol.setForwardMsgData(forwardMsgData);
+			connection.sendProtocol(protocol);
+
+		}
 	}
 }
