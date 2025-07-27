@@ -5,7 +5,6 @@ import java.util.List;
 import org.apache.commons.lang3.StringUtils;
 
 import gleam.communication.Connection;
-import gleam.communication.MessageDirectHandler;
 import gleam.communication.Protocol;
 import gleam.communication.define.ConnectionConstant;
 import gleam.communication.define.DisconnectReason;
@@ -65,7 +64,6 @@ public abstract class WebSocketServerConnectionListener<T extends WebSocketServe
 		}
 	}
 
-	@SuppressWarnings({ "rawtypes", "unchecked" })
 	@Override
 	public void receiveProtocol(Connection connection, Protocol protocol) {
 		// 监控玩家发送协议频率
@@ -76,27 +74,7 @@ public abstract class WebSocketServerConnectionListener<T extends WebSocketServe
 			handleConnectionOverspeed(connection, monitor);
 			return;
 		}
-		int msgId = protocol.getId();
-		MessageDirectHandler messageHandler = directHandlers.get(msgId);
-		Protocol response = null;
-		if (messageHandler != null) {
-			response = messageHandler.handleMessage(protocol);
-		} else {
-			response = handleCustomProtocol(connection, protocol);
-		}
-		if (response != null) {
-			response.setSeq(protocol.getSeq());
-			connection.sendProtocol(response);
-		}
+		super.receiveProtocol(connection, protocol);
 	}
-
-	/**
-	 * 处理自定义协议
-	 * 
-	 * @param connection
-	 * @param protocol
-	 * @return
-	 */
-	protected abstract Protocol handleCustomProtocol(Connection connection, Protocol protocol);
 
 }

@@ -8,7 +8,7 @@ package gleam.communication;
  */
 public interface ConnectionListener {
 
-    void init();
+    void init() throws Exception;
 
     /**
      * 连接成功事件

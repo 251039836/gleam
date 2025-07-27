@@ -7,6 +7,7 @@ import gleam.communication.define.DisconnectReason;
 import gleam.communication.echo.EchoServer;
 import gleam.communication.echo.handler.EchoMessageHandler;
 import gleam.communication.server.ServerConnectionListener;
+import gleam.core.Entity;
 
 /**
  * @author redback
@@ -38,5 +39,11 @@ public class EchoServerConnectListener extends ServerConnectionListener<EchoServ
 				connection.sendProtocolAndClose(response, DisconnectReason.OVER);
 			}
 		}
+	}
+
+	@Override
+	protected Entity<?> getHandleEntity(Connection connection, Protocol protocol) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 }

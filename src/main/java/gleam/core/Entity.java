@@ -4,6 +4,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 
 import gleam.communication.MessageHandler;
+import gleam.core.event.GameEvent;
 import gleam.core.event.GameEventListener;
 import gleam.task.Task;
 
@@ -34,7 +35,8 @@ public interface Entity<C extends Component> extends Component {
 
 	/**
 	 * 提交执行任务<br>
-	 * 使用该实体对应使用的线程执行
+	 * 使用该实体对应使用的线程执行<br>
+	 * 异步/延后处理
 	 * 
 	 * @param task
 	 */
@@ -42,11 +44,21 @@ public interface Entity<C extends Component> extends Component {
 
 	/**
 	 * 提交回调任务<br>
-	 * 使用该实体对应使用的线程执行
+	 * 使用该实体对应使用的线程执行<br>
+	 * 若调用者为此实体 会使用当前线程之间执行
 	 * 
 	 * @param task
 	 */
 	<V> Future<V> submitCallback(long token, Callable<V> callable);
+
+	/**
+	 * 提交处理事件任务<br>
+	 * 使用该实体对应线程执行<br>
+	 * 异步/延后处理<br>
+	 * 
+	 * @param event
+	 */
+	void submitHandleEvent(GameEvent event);
 
 	/**
 	 * 注册组件

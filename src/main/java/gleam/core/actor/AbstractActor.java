@@ -5,7 +5,9 @@ import java.util.concurrent.Future;
 
 import gleam.core.AbstractEntity;
 import gleam.core.Component;
+import gleam.core.event.GameEvent;
 import gleam.core.executor.ActorTaskExecutor;
+import gleam.core.executor.task.EntityHandleEventTask;
 import gleam.task.Task;
 
 public abstract class AbstractActor<C extends Component> extends AbstractEntity<C> implements Actor<C> {
@@ -17,6 +19,12 @@ public abstract class AbstractActor<C extends Component> extends AbstractEntity<
 
 	@Override
 	public void submitTask(Task task) {
+		ActorTaskExecutor.getInstance().submit(getId(), task);
+	}
+
+	@Override
+	public void submitHandleEvent(GameEvent event) {
+		EntityHandleEventTask task = EntityHandleEventTask.get(this, event);
 		ActorTaskExecutor.getInstance().submit(getId(), task);
 	}
 }

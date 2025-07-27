@@ -76,8 +76,7 @@ public class NettyConnection implements Connection {
 		}
 		if (ip == null || ip.isEmpty()) {
 			SocketAddress remoteAddress = channel.remoteAddress();
-			if (remoteAddress instanceof InetSocketAddress) {
-				InetSocketAddress inetAddress = (InetSocketAddress) remoteAddress;
+			if (remoteAddress instanceof InetSocketAddress inetAddress) {
 				ip = inetAddress.getAddress().getHostAddress();
 			} else {
 				ip = remoteAddress.toString();

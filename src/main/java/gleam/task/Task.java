@@ -9,20 +9,20 @@ package gleam.task;
  */
 @FunctionalInterface
 public interface Task {
-    /**
-     * 执行
-     * 
-     * @throws Exception
-     */
-    void execute() throws Exception;
+	/**
+	 * 执行
+	 * 
+	 * @throws Exception
+	 */
+	void execute() throws Exception;
 
-    /**
-     * 简介
-     * 
-     * @return
-     */
-    default String toDesc() {
-        return getClass().getSimpleName();
-    }
+	/**
+	 * 简介
+	 * 
+	 * @return
+	 */
+	default String toDesc() {
+		return getClass().getSimpleName();
+	}
 
 }

@@ -1,5 +1,16 @@
 package gleam.core.ref.define;
 
+/**
+ * 实体引用状态<br>
+ * <code>
+ * init->check->run<br>
+ *          ↘invalid<br>
+ * </code>
+ * 
+ * 
+ * @author hdh
+ *
+ */
 public class EntityRefState {
 	/**
 	 * 初始状态

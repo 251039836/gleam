@@ -1,6 +1,7 @@
 package gleam.task.token;
 
 import java.util.concurrent.Callable;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 
 import gleam.task.Task;
@@ -39,4 +40,7 @@ public interface TokenTaskQueueExecutor {
      * @param task
      */
     void submit(long token, Task task);
+    
+    
+    Executor getTokenExecutor(long token);
 }

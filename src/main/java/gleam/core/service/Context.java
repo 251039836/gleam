@@ -17,6 +17,8 @@ import gleam.communication.inner.auth.InnerIdentity;
 import gleam.config.ServerSettings;
 import gleam.core.AbstractEntity;
 import gleam.core.define.ServiceStatus;
+import gleam.core.event.GameEvent;
+import gleam.core.executor.task.EntityHandleEventTask;
 import gleam.core.ref.EntityManager;
 import gleam.exception.ServerStarupError;
 import gleam.task.Task;
@@ -27,7 +29,7 @@ import gleam.util.ClazzUtil;
 /**
  * 进程上下文<br>
  * 默认每个进程对应1个上下文<br>
- * 挂载所有需要用到的公共服务类
+ * 挂载所有需要用到的公共服务类<br>
  * 
  * @author hdh
  *
@@ -377,5 +379,11 @@ public abstract class Context extends AbstractEntity<Service> implements Zone<Se
 		DefaultFutureTask<V> task = new DefaultFutureTask<>(callable);
 		TaskManager.getInstance().scheduleTask(task);
 		return task;
+	}
+
+	@Override
+	public void submitHandleEvent(GameEvent event) {
+		EntityHandleEventTask task = EntityHandleEventTask.get(this, event);
+		TaskManager.getInstance().scheduleTask(task);
 	}
 }

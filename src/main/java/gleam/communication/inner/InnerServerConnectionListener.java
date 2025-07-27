@@ -11,8 +11,7 @@ import gleam.communication.inner.handler.ReqMultipleServerForwardHandler;
 import gleam.communication.rpc.ConnectionRpcAddon;
 import gleam.communication.rpc.RpcCallbackCache;
 import gleam.communication.server.ServerConnectionListener;
-import gleam.communication.task.CommunicationTaskManager;
-import gleam.core.service.Context;
+import gleam.core.Entity;
 
 /**
  * 内网连接中的服务端端的连接监听<br>
@@ -68,35 +67,32 @@ public abstract class InnerServerConnectionListener<T extends InnerServer> exten
 			}
 			return;
 		}
-		// FIXME 线程池
-		CommunicationTaskManager.SERVER.scheduleTask(() -> {
-			handleCustomProtocol(connection, protocol);
-		});
-	}
-
-	private void handleCustomProtocol(Connection connection, Protocol request) {
-		int seq = request.getSeq();
 		if (seq < 0) {
 			// 内网服务器通信 seq负数为rpc返回协议
-			ConnectionRpcAddon rpcAddon = connection.getAttribute(ConnectionRpcAddon.ATTR_KEY);
-			if (rpcAddon != null) {
-				RpcCallbackCache rpcCallbackCache = rpcAddon.getCallbackCache();
-				boolean flag = rpcCallbackCache.receiveResponse(-seq, request);
-				if (flag) {
-					return;
-				}
+			boolean flag = handleRpcResponse(connection, protocol);
+			if (flag) {
 				return;
 			}
 			// rpc超时的请求 尝试走普通的处理流程
 		}
-		// 非rpc返回 也不是直接处理的协议
-		// 尝试扔到context中处理
-		Protocol response = getContext().handleMessage(request);
-		if (response != null) {
-			response.setSeq(-seq);
-			connection.sendProtocol(response);
+		Entity<?> entity = getHandleEntity(connection, protocol);
+		if (entity != null) {
+			// 线程池;
+			entityHandleMsg(entity, connection, protocol);
+			return;
 		}
+		handleMsgWithoutEntity(connection, protocol);
 	}
 
-	protected abstract Context getContext();
+	private boolean handleRpcResponse(Connection connection, Protocol protocol) {
+		ConnectionRpcAddon rpcAddon = connection.getAttribute(ConnectionRpcAddon.ATTR_KEY);
+		if (rpcAddon != null) {
+			int seq = protocol.getSeq();
+			RpcCallbackCache rpcCallbackCache = rpcAddon.getCallbackCache();
+			boolean flag = rpcCallbackCache.receiveResponse(-seq, protocol);
+			return flag;
+		}
+		return false;
+	}
+
 }

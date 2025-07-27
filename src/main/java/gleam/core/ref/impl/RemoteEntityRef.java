@@ -239,7 +239,6 @@ public class RemoteEntityRef implements EntityRef {
 			callbackMap.clear();
 			return;
 		}
-
 		state.set(EntityRefState.RUN);
 		if (waitSendMsgs.isEmpty()) {
 			return;
@@ -256,6 +255,14 @@ public class RemoteEntityRef implements EntityRef {
 		int srcServerId = context.getServerId();
 		while (!waitSendMsgs.isEmpty()) {
 			Protocol forwardMsg = waitSendMsgs.peek();
+			int seq = forwardMsg.getSeq();
+			if (seq != 0) {
+				RpcCallback<?> callback = callbackCache.getCallback(-seq);
+				if (callback == null) {
+					// 已过期
+					continue;
+				}
+			}
 			ReqEntityForward protocol = new ReqEntityForward();
 			protocol.setSrcServerType(srcServerType);
 			protocol.setSrcServerId(srcServerId);

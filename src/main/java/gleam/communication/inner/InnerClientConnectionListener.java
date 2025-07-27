@@ -65,7 +65,6 @@ public abstract class InnerClientConnectionListener<T extends InnerClient> exten
 				response.setSeq(-seq);
 				connection.sendProtocol(response);
 			}
-			return;
 		}
 		// FIXME 线程池
 		CommunicationTaskManager.CLIENT.scheduleTask(() -> {

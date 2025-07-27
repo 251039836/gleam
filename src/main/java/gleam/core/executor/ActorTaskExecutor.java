@@ -5,8 +5,8 @@ import java.util.Collection;
 import gleam.communication.Protocol;
 import gleam.core.actor.Actor;
 import gleam.core.event.GameEvent;
-import gleam.core.executor.task.ActorHandleGameEventTask;
-import gleam.core.executor.task.ActorHandleMessageTask;
+import gleam.core.executor.task.EntityHandleEventTask;
+import gleam.core.executor.task.EntityHandleMsgTask;
 import gleam.task.Task;
 import gleam.task.token.DefaultTokenTaskQueueExecutor;
 
@@ -30,13 +30,13 @@ public class ActorTaskExecutor extends DefaultTokenTaskQueueExecutor {
 
 	public void handleProtocol(Actor<?> actor, Protocol request) {
 		long actorId = actor.getId();
-		ActorHandleMessageTask task = ActorHandleMessageTask.get(actor, request);
+		EntityHandleMsgTask task = EntityHandleMsgTask.get(actor, request);
 		submit(actorId, task);
 	}
 
 	public void handleGameEvent(Actor<?> actor, GameEvent event) {
 		long actorId = actor.getId();
-		ActorHandleGameEventTask task = ActorHandleGameEventTask.get(actor, event);
+		EntityHandleEventTask task = EntityHandleEventTask.get(actor, event);
 		submit(actorId, task);
 	}
 
@@ -57,7 +57,7 @@ public class ActorTaskExecutor extends DefaultTokenTaskQueueExecutor {
 		}
 		for (Actor<?> actor : actors) {
 			long playerId = actor.getId();
-			ActorHandleGameEventTask task = ActorHandleGameEventTask.get(actor, event);
+			EntityHandleEventTask task = EntityHandleEventTask.get(actor, event);
 			submit(playerId, task);
 		}
 	}
